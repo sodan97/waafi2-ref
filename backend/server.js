@@ -1,10 +1,15 @@
 import express from 'express';
 import mongoose from 'mongoose';
+import helmet from 'helmet';
+import cors from 'cors';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+app.use(helmet());
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/belleza_db';
 
+app.use(cors());
 // Connect to MongoDB
 mongoose.connect(MONGODB_URI)
 .then(() => {
