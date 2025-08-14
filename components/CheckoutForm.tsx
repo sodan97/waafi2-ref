@@ -19,6 +19,12 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderSuccess }) => {
     address: '',
     phone: ''
   });
+  const [errors, setErrors] = useState({
+    firstName: '',
+    lastName: '',
+    address: '',
+    phone: ''
+  });
 
   useEffect(() => {
     if (currentUser) {
@@ -33,9 +39,55 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderSuccess }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear previous error for the field when it's changed
+    setErrors(prev => ({ ...prev, [name]: '' }));
   };
   
-  const isFormValid = formData.firstName && formData.lastName && formData.phone;
+  const validateForm = () => {
+    const newErrors = { firstName: '', lastName: '', address: '', phone: '' };
+    let isValid = true;
+
+    // First Name validation: only letters and spaces, not empty
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'Le prénom est requis.';
+      isValid = false;
+    } else if (!/^[a-zA-Z\sÀàÂâÄäÈèÉéÊêËëÎîÏïÔôÖöÙùÛûÜüÇç'-]+$/.test(formData.firstName)) {
+       newErrors.firstName = 'Le prénom ne doit contenir que des lettres.';
+       isValid = false;
+    }
+
+    // Last Name validation: only letters and spaces, not empty
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Le nom est requis.';
+      isValid = false;
+    } else if (!/^[a-zA-Z\sÀàÂâÄäÈèÉéÊêËëÎîÏïÔôÖöÙùÛûÜüÇç'-]+$/.test(formData.lastName)) {
+       newErrors.lastName = 'Le nom ne doit contenir que des lettres.';
+       isValid = false;
+    }
+
+    // Phone validation: only digits, not empty
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Le numéro de téléphone est requis.';
+      isValid = false;
+    } else if (!/^\d+$/.test(formData.phone)) {
+      newErrors.phone = 'Le numéro de téléphone ne doit contenir que des chiffres.';
+      isValid = false;
+    }
+     // Optional: Basic length check for phone (adjust as needed)
+     // else if (formData.phone.trim().length < 8) { // Example minimum length
+     //   newErrors.phone = 'Le numéro de téléphone est trop court.';
+     //   isValid = false;
+     // }
+
+    // Address validation: basic check if not empty when filled
+    // No specific format validation for address here, just if it's filled
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  // Determine overall form validity based on the errors state and required fields
+  const isFormValid = !errors.firstName && !errors.lastName && !errors.phone && formData.firstName.trim() !== '' && formData.lastName.trim() !== '' && formData.phone.trim() !== '';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,19 +138,23 @@ Merci de confirmer la commande et de me communiquer les modalités de paiement e
         <div>
           <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">Prénom <span className="text-red-500">*</span></label>
           <input type="text" id="firstName" name="firstName" value={formData.firstName} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-rose-500 focus:border-rose-500" />
+ {errors.firstName && <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>}
         </div>
         <div>
           <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Nom <span className="text-red-500">*</span></label>
           <input type="text" id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-rose-500 focus:border-rose-500" />
+ {errors.lastName && <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>}
         </div>
       </div>
       <div>
         <label htmlFor="address" className="block text-sm font-medium text-gray-700">Adresse Complète</label>
         <input type="text" id="address" name="address" value={formData.address} onChange={handleChange} placeholder="Ex: Cité Keur Gorgui, Lot 123, Dakar" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-rose-500 focus:border-rose-500" />
+ {/* No error display for optional address unless you add specific validation rules */}
       </div>
       <div>
         <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Numéro de Téléphone <span className="text-red-500">*</span></label>
         <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} required placeholder="Ex: 771234567" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-rose-500 focus:border-rose-500" />
+ {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
       </div>
       <div className="text-center pt-4">
         <button

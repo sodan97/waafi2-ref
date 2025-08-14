@@ -37,6 +37,10 @@ export interface Order {
   date: string;
 }
 
+export interface LoginResponse {
+  token: string;
+}
+
 export interface Reservation {
   productId: number;
   userId: number;

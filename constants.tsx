@@ -2,7 +2,7 @@
 import React from 'react';
 import { Product } from './types';
 
-export const MERCHANT_WHATSAPP_NUMBER = '33766561351'; // IMPORTANT: Remplacez par le vrai numéro du commerçant (indicatif pays + numéro, SANS le '+')
+export const MERCHANT_WHATSAPP_NUMBER = import.meta.env.VITE_MERCHANT_WHATSAPP_NUMBER; // IMPORTANT: Remplacez par le vrai numéro du commerçant dans le fichier .env (indicatif pays + numéro, SANS le '+')
 
 export const HERO_SLIDES = [
   {

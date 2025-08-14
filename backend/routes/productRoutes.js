@@ -1,5 +1,8 @@
 import express from 'express';
 import Product from '../models/Product.js';
+import { body, validationResult, param } from 'express-validator';
+import { protect } from '../middleware/authMiddleware.js';
+import { admin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -15,6 +18,11 @@ router.get('/products', async (req, res) => {
 
 // GET a single product by ID
 router.get('/products/:id', async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   try {
     const product = await Product.findOne({ id: req.params.id });
     if (product == null) {
@@ -27,7 +35,19 @@ router.get('/products/:id', async (req, res) => {
 });
 
 // POST add a new product
-router.post('/products', async (req, res) => {
+router.post('/products', protect, admin, [
+  body('name').isString().notEmpty().withMessage('Name is required and must be a string'),
+  body('description').isString().notEmpty().withMessage('Description is required and must be a string'),
+  body('price').isFloat({ gt: 0 }).withMessage('Price is required and must be a positive number'),
+  body('imageUrls').isArray().withMessage('Image URLs must be an array'),
+  body('imageUrls.*').isURL().withMessage('Each image URL must be a valid URL'), // Added validation for each URL in the array
+  body('category').isString().notEmpty().withMessage('Category is required and must be a string'),
+  body('stock').isInt({ gt: -1 }).withMessage('Stock is required and must be a non-negative integer'),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
   const lastProduct = await Product.findOne().sort({ id: -1 }).limit(1);
   const newId = lastProduct ? lastProduct.id + 1 : 1;
 
@@ -51,7 +71,20 @@ router.post('/products', async (req, res) => {
 });
 
 // PUT update an existing product
-router.put('/products/:id', async (req, res) => {
+router.put('/products/:id', protect, admin, [
+  param('id').isInt({ gt: 0 }).withMessage('Product ID must be a positive integer'),
+  body('name').optional().isString().notEmpty().withMessage('Name must be a non-empty string'),
+  body('description').optional().isString().notEmpty().withMessage('Description must be a non-empty string'),
+  body('price').optional().isFloat({ gt: 0 }).withMessage('Price must be a positive number'),
+  body('imageUrls').optional().isArray().withMessage('Image URLs must be an array'),
+  body('imageUrls.*').optional().isURL().withMessage('Each image URL must be a valid URL'),
+  body('category').optional().isString().notEmpty().withMessage('Category must be a non-empty string'),
+  body('stock').optional().isInt({ gt: -1 }).withMessage('Stock must be a non-negative integer'),
+], protect, async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
   try {
     const product = await Product.findOne({ id: req.params.id });
     if (product == null) {
@@ -74,7 +107,11 @@ router.put('/products/:id', async (req, res) => {
 });
 
 // DELETE soft delete a product (set status to 'deleted')
-router.delete('/products/:id', async (req, res) => {
+router.delete('/products/:id', protect, admin, [
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) { return res.status(400).json({ errors: errors.array() }); }
+    
     try {
         const product = await Product.findOne({ id: req.params.id });
         if (product == null) {
@@ -90,7 +127,9 @@ router.delete('/products/:id', async (req, res) => {
 });
 
 // PUT restore a deleted product (set status to 'active')
-router.put('/products/:id/restore', async (req, res) => {
+router.put('/products/:id/restore', protect, admin, [
+ param('id').isInt({ gt: 0 }).withMessage('Product ID must be a positive integer'),
+], async (req, res) => {
     try {
         const product = await Product.findOne({ id: req.params.id });
         if (product == null) {
@@ -106,7 +145,9 @@ router.put('/products/:id/restore', async (req, res) => {
 });
 
 // DELETE permanently delete a product
-router.delete('/products/:id/permanent', async (req, res) => {
+router.delete('/products/:id/permanent', protect, admin, [
+ param('id').isInt({ gt: 0 }).withMessage('Product ID must be a positive integer'),
+], async (req, res) => {
     try {
         const result = await Product.deleteOne({ id: req.params.id });
         if (result.deletedCount === 0) {

@@ -1,17 +1,15 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { User } from '../types';
+import { User, LoginResponse } from '../types'; // Assuming LoginResponse includes token and user info
+import {jwtDecode} from 'jwt-decode'; // Assuming jwt-decode is installed for decoding tokens
 
 interface AuthContextType {
   currentUser: User | null;
-  users: User[];
-  login: (email: string, password: string) => User | null;
+  login: (email: string, password: string) => Promise<User>; // login is now async and returns a User
   logout: () => void;
-  register: (userData: Omit<User, 'id' | 'role'>) => boolean;
+  register: (userData: Omit<User, 'id' | 'role'>) => Promise<boolean>; // register is now async and returns a boolean
 }
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 const USERS_KEY = 'belleza-users';
 const CURRENT_USER_KEY = 'belleza-currentUser';
 

@@ -13,16 +13,18 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView }) => {
   const [error, setError] = useState('');
   const { login } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const user = login(email, password);
-    if (user) {
-      // Redirection logic is now handled by useEffect in App.tsx
-      // This setView is just to trigger the state change
-      const targetView = user.role === 'admin' ? 'admin' : 'products';
-      setView(targetView);
-    } else {
+
+    try {
+      // Assuming login is now async and throws on failure
+      await login(email, password);
+      // If login succeeds, the user is set in AuthContext,
+      // and useEffect in App.tsx should handle navigation.
+      // No need to call setView here directly unless necessary for state update.
+      // setView(currentUser?.role === 'admin' ? 'admin' : 'products'); // Example if needed
+    } catch (err) {
       setError('Email ou mot de passe incorrect.');
     }
   };
