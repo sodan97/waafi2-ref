@@ -1,0 +1,17 @@
+gcloudignore
+# This file specifies files that are not required for the application's deployment.
+# To learn more, see https://cloud.google.com/sdk/gcloud/reference/topic/gcloudignore.
+
+.gcloudignore
+.git
+.gitignore
+.env
+.vscode/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# You may also want to ignore built assets if you are building locally and deploying
+# static files separately, for example:
+# build/
+# dist/
