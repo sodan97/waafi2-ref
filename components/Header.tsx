@@ -56,7 +56,7 @@ const Header: React.FC<HeaderProps> = ({ setView, onLogoClick, navigateToProduct
           onClick={onLogoClick}
           style={{textShadow: '1px 1px 2px rgba(0,0,0,0.1)'}}
         >
-          Belleza
+          Wafi
         </h1>
         <div className="flex items-center gap-3 sm:gap-5">
           {currentUser ? (
