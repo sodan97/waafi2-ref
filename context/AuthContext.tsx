@@ -27,10 +27,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!adminExists) {
         const adminUser: User = {
           id: Date.now(),
-          email: 'admin@belleza.com',
+          email: 'admin@wafi.com',
           password: 'admin', // In a real app, use a hashed password
           firstName: 'Admin',
-          lastName: 'Belleza',
+          lastName: 'WAFI',
           role: 'admin',
         };
         loadedUsers.push(adminUser);

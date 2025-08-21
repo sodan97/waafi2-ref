@@ -18,7 +18,7 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-const NOTIFICATIONS_KEY = 'belleza-notifications';
+const NOTIFICATIONS_KEY = 'wafi-notifications';
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>(() => {
