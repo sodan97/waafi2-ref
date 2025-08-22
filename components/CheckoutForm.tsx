@@ -91,7 +91,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderSuccess }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
- if (!isFormValid || cartItems.length === 0) return;
+    if (!validateForm() || cartItems.length === 0) return;
 
     // Make handleSubmit async
     const submitOrder = async () => {
@@ -137,7 +137,7 @@ Merci de confirmer la commande et de me communiquer les modalités de paiement e
       // Handle the potential undefined return value (failure)
       if (newOrder) {
         // If order succeeded, call onOrderSuccess with the new order ID
-        onOrderSuccess(whatsappUrl, newOrder.id);
+        onOrderSuccess(whatsappUrl);
       } else {
         // Handle failure (e.g., show an error message to the user)
         console.error('Failed to create order via API');
@@ -152,28 +152,27 @@ Merci de confirmer la commande et de me communiquer les modalités de paiement e
         <div>
           <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">Prénom <span className="text-red-500">*</span></label>
           <input type="text" id="firstName" name="firstName" value={formData.firstName} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-rose-500 focus:border-rose-500" />
- {errors.firstName && <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>}
+          {errors.firstName && <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>}
         </div>
         <div>
           <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Nom <span className="text-red-500">*</span></label>
           <input type="text" id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-rose-500 focus:border-rose-500" />
- {errors.lastName && <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>}
+          {errors.lastName && <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>}
         </div>
       </div>
       <div>
         <label htmlFor="address" className="block text-sm font-medium text-gray-700">Adresse Complète</label>
         <input type="text" id="address" name="address" value={formData.address} onChange={handleChange} placeholder="Ex: Cité Keur Gorgui, Lot 123, Dakar" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-rose-500 focus:border-rose-500" />
- {/* No error display for optional address unless you add specific validation rules */}
       </div>
       <div>
         <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Numéro de Téléphone <span className="text-red-500">*</span></label>
         <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} required placeholder="Ex: 771234567" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-rose-500 focus:border-rose-500" />
- {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
+        {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
       </div>
       <div className="text-center pt-4">
         <button
           type="submit"
-          disabled={!isFormValid || cartItems.length === 0}
+          disabled={!validateForm() || cartItems.length === 0}
           className="w-full sm:w-auto bg-rose-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-rose-600 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           Commander via WhatsApp

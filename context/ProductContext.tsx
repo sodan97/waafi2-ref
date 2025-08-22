@@ -60,17 +60,15 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [fetchProducts]);
 
   const activeProducts = products.filter(p => p.status === 'active');
+  
   const updateStateAfterOperation = useCallback((updatedProduct?: Product | null) => {
- if (updatedProduct) {
- setProducts(prevProducts =>
- prevProducts.map(p => (p.id === updatedProduct.id ? updatedProduct : p))
- );
- } else {
- // Option 1: Refetch all products (simpler, but less efficient for single updates)
- fetchProducts();
- // Option 2: Manually update state based on operation type (more complex)
- // This would require passing more context about the operation (e.g., 'added', 'updated', 'deleted')
- }
+    if (updatedProduct) {
+      setProducts(prevProducts =>
+        prevProducts.map(p => (p.id === updatedProduct.id ? updatedProduct : p))
+      );
+    } else {
+      fetchProducts();
+    }
   }, [fetchProducts]);
 
   const updateProductStock = useCallback(async (productId: number, newStock: number) => {

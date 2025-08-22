@@ -36,6 +36,23 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   // Function to fetch orders from the backend
   const fetchOrders = async () => {
+    if (!currentUser) return;
+    
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}?userId=${currentUser.id}`);
+      if (!response.ok) {
+        throw new Error(`Error fetching orders: ${response.statusText}`);
+      }
+      const data = await response.json();
+      setOrders(data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch orders');
+      console.error("Error fetching orders:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Function to add a new order via backend API

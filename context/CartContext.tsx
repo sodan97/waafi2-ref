@@ -5,9 +5,9 @@ import { useProduct } from './ProductContext';
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (productId: number, quantity?: number) => Promise<void>;
-  removeFromCart: (productId: number) => Promise<void>;
-  updateQuantity: (productId: number, quantity: number) => Promise<void>;
+  addToCart: (product: Product, quantity?: number) => void;
+  removeFromCart: (productId: number) => void;
+  updateQuantity: (productId: number, quantity: number) => void;
   clearCart: () => void;
   itemCount: number;
   isLoadingCart: boolean;
@@ -25,50 +25,27 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Assuming cart is client-side until checkout, no initial fetch needed.
   // If cart were server-persistent, a useEffect with fetchCart() would go here.
 
-  const addToCart = async (productId: number, quantity: number = 1) => {
-    setIsLoadingCart(true);
-    // Clear previous error if any
-    setCartError(null);
-
+  const addToCart = (product: Product, quantity: number = 1) => {
     setCartError(null);
     try {
-      // Ideally, you would call a backend API here to add the item to the cart,
-      // which would also handle stock checks on the server side.
-      // Example: const response = await fetch('/api/cart/add', { method: 'POST', ... });
-      // For now, we'll update the local state and assume stock check is done elsewhere or not critical here.
-
-      // Check product existence and stock locally for immediate feedback (optional, backend is source of truth)
-      const productToAdd = products.find(p => p.id === productId);
-      if (!productToAdd) {
-        throw new Error("Product not found.");
-      }
-      if (productToAdd.stock < quantity) {
-         // Handle insufficient stock error - maybe show a notification
-         console.warn(`Cannot add ${quantity} of product ${productId}. Insufficient stock.`);
-         setIsLoadingCart(false);
-         // Optionally set a specific error state related to stock
-         return;
+      if (product.stock < quantity) {
+        console.warn(`Cannot add ${quantity} of product ${product.id}. Insufficient stock.`);
+        return;
       }
 
-      // Update local state immediately (optimistic update) or after successful API call
-      // For simplicity, updating locally after basic checks.
-      // In a real app with persistent cart, update state based on API response.
       setCartItems(prevItems => {
-        const existingItem = prevItems.find(item => item.id === productId);
+        const existingItem = prevItems.find(item => item.id === product.id);
         if (existingItem) {
           return prevItems.map(item =>
-            item.id === productId ? { ...item, quantity: item.quantity + quantity } : item
+            item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
           );
         } else {
-          return [...prevItems, { ...productToAdd, quantity: quantity }];
+          return [...prevItems, { ...product, quantity: quantity }];
         }
       });
-      // Si le stock est à 0, on ne fait rien.
-    setIsLoadingCart(false);
     } catch (error) {
-        console.error("Failed to add item to cart", error);
-        setCartError(error instanceof Error ? error : new Error(String(error)));
-        setIsLoadingCart(false);
+      console.error("Failed to add item to cart", error);
+      setCartError(error instanceof Error ? error : new Error(String(error)));
     }
   };
 
@@ -76,48 +53,35 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setCartItems([]);
   };
 
-  const removeFromCart = async (productId: number) => {
-    setIsLoadingCart(true);
+  const removeFromCart = (productId: number) => {
     setCartError(null);
     try {
-      // If cart is persistent, call backend API to remove item
-      // await fetch(`/api/cart/remove/${productId}`, { method: 'DELETE' });
-
-      // Update local state
       setCartItems(prevItems => prevItems.filter(item => item.id !== productId));
-      setIsLoadingCart(false);
     } catch (error) {
       console.error("Failed to remove item from cart", error);
       setCartError(error instanceof Error ? error : new Error(String(error)));
-      setIsLoadingCart(false);
     }
   };
 
-  const updateQuantity = async (productId: number, quantity: number) => {
+  const updateQuantity = (productId: number, quantity: number) => {
     if (quantity <= 0) {
-      await removeFromCart(productId);
+      removeFromCart(productId);
       return;
     }
 
-    setIsLoadingCart(true);
     setCartError(null);
     try {
-        // If cart is persistent, call backend API to update quantity
-        // await fetch(`/api/cart/update/${productId}`, { method: 'PUT', body: JSON.stringify({ quantity }), ... });
-
-        // Update local state
-        setCartItems(prevItems =>
-          prevItems.map(item =>
-            item.id === productId ? { ...item, quantity } : item
-          )
-        );
-        setIsLoadingCart(false);
+      setCartItems(prevItems =>
+        prevItems.map(item =>
+          item.id === productId ? { ...item, quantity } : item
+        )
+      );
     } catch (error) {
-        console.error("Failed to update cart item quantity", error);
-        setCartError(error instanceof Error ? error : new Error(String(error)));
-        setIsLoadingCart(false);
+      console.error("Failed to update cart item quantity", error);
+      setCartError(error instanceof Error ? error : new Error(String(error)));
     }
   };
+  
   const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   return (

@@ -15,7 +15,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ setView, onLogoClick, navigateToProductPage }) => {
   const { itemCount } = useCart();
   const { currentUser, logout } = useAuth();
-  const { notifications, unreadCount, markAllAsRead } = useNotification();
+  const { notifications, unreadCount, markAsRead } = useNotification();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -27,7 +27,7 @@ const Header: React.FC<HeaderProps> = ({ setView, onLogoClick, navigateToProduct
   const handleNotificationToggle = () => {
     setIsNotificationOpen(prev => !prev);
     if (!isNotificationOpen) {
-        markAllAsRead();
+        markAsRead();
     }
   };
 

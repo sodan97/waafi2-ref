@@ -4,12 +4,12 @@ import { defineConfig, loadEnv } from 'vite';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
- server: {
- proxy: {
+      server: {
+        proxy: {
           '/api': {
- target: 'http://localhost:5001',
- changeOrigin: true,
- rewrite: (path) => path.replace(/^\/api/, ''),
+            target: 'http://localhost:5001',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/api/, ''),
           },
         },
       },

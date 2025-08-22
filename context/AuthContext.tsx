@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { User, LoginResponse } from '../types';
-import {jwtDecode} from 'jwt-decode'; // Assuming jwt-decode is installed for decoding tokens
+import { jwtDecode } from 'jwt-decode';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -26,22 +26,42 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const token = localStorage.getItem('token');
         if (!token) {
           setCurrentUser(null);
+          setIsLoadingAuth(false);
           return;
         }
-        // Optionally verify token with backend
-        const response = await fetch('/api/users/status', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        
+        // Decode token to get user info
+        try {
+          const decoded: any = jwtDecode(token);
+          
+          // Check if token is expired
+          if (decoded.exp * 1000 < Date.now()) {
+            localStorage.removeItem('token');
+            setCurrentUser(null);
+            setIsLoadingAuth(false);
+            return;
+          }
+          
+          // Get user details from backend
+          const response = await fetch(`/api/users/${decoded.id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
 
-        if (!response.ok) {
+          if (!response.ok) {
+            localStorage.removeItem('token');
+            setCurrentUser(null);
+            throw new Error('Authentication check failed');
+          }
+          
+          const userData: User = await response.json();
+          setCurrentUser(userData);
+        } catch (tokenError) {
+          console.error('Token decode error:', tokenError);
           localStorage.removeItem('token');
           setCurrentUser(null);
-          throw new Error('Authentication check failed');
         }
-        const userData: User = await response.json();
-        setCurrentUser(userData);
       } catch (error) {
         console.error("Authentication check error:", error);
         setAuthError(error instanceof Error ? error : new Error(String(error)));
@@ -72,9 +92,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const data: LoginResponse = await response.json();
       localStorage.setItem('token', data.token);
-      setCurrentUser(data.user);
+      
+      // Decode token to get user info
+      const decoded: any = jwtDecode(data.token);
+      const userResponse = await fetch(`/api/users/${decoded.id}`, {
+        headers: {
+          'Authorization': `Bearer ${data.token}`,
+        },
+      });
+      
+      if (userResponse.ok) {
+        const userData: User = await userResponse.json();
+        setCurrentUser(userData);
+      }
+      
       setIsLoadingAuth(false);
-      return data.user;
+      return currentUser;
 
     } catch (error) {
       console.error("Login error:", error);
@@ -124,9 +157,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const newUser: User = await response.json(); // Assuming backend returns the new user object
       // Optionally log in the new user automatically
       // localStorage.setItem('token', newToken); // if backend returns a token
-      setCurrentUser(newUser);
+      
+      // Auto-login after registration
+      const loginResult = await login(userData.email, userData.password);
       setIsLoadingAuth(false);
-      return newUser;
+      return loginResult;
     } catch (error) {
       console.error("Registration error:", error);
       setAuthError(error instanceof Error ? error : new Error(String(error)));

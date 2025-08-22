@@ -11,7 +11,10 @@ interface CartViewProps {
 
 const CartView: React.FC<CartViewProps> = ({ onContinueShopping }) => {
   const { cartItems, updateQuantity, removeFromCart, itemCount, clearCart } = useCart();
-  const [checkoutState, setCheckoutState] = useState<{ isSubmitted: boolean; whatsappUrl: string; }>({ isSubmitted: false, whatsappUrl: '' });
+  const [checkoutState, setCheckoutState] = useState<{ isSubmitted: boolean; whatsappUrl: string; }>({ 
+    isSubmitted: false, 
+    whatsappUrl: '' 
+  });
 
   const totalPrice = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
 
