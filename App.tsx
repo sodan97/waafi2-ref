@@ -161,7 +161,7 @@ const App: React.FC = () => {
         {renderContent()}
       </main>
       <footer className="text-center py-6 bg-white border-t mt-12">
-          <p className="text-gray-500">&copy; 2024 Belleza. Tous droits réservés.</p>
+          <p className="text-gray-500">&copy; 2025 Wafi. Tous droits réservés.</p>
       </footer>
       {notificationOptionsProduct && (
         <NotificationOptionsModal
