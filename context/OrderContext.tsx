@@ -36,17 +36,21 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   // Function to fetch orders from the backend
   const fetchOrders = async () => {
-    if (!currentUser) return;
-    
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}?userId=${currentUser.id}`);
-      if (!response.ok) {
-        throw new Error(`Error fetching orders: ${response.statusText}`);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const storedOrders = localStorage.getItem('orders');
+      let allOrders: Order[] = storedOrders ? JSON.parse(storedOrders) : [];
+      
+      // Filter orders for current user if logged in
+      if (currentUser) {
+        allOrders = allOrders.filter(order => order.userId === currentUser.id.toString());
       }
-      const data = await response.json();
-      setOrders(data);
+      
+      setOrders(allOrders);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch orders');
       console.error("Error fetching orders:", err);
@@ -60,19 +64,22 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
      setIsLoading(true);
      setError(null);
      try {
-       const response = await fetch(API_BASE_URL, {
-         method: 'POST',
-         headers: {
-           'Content-Type': 'application/json',
-         },
-         body: JSON.stringify(orderData),
-       });
-
-       if (!response.ok) {
-         throw new Error(`Error adding order: ${response.statusText}`);
-       }
-
-       const newOrder = await response.json();
+       // Simulate API delay
+       await new Promise(resolve => setTimeout(resolve, 500));
+       
+       const newOrder: Order = {
+         ...orderData,
+         id: Date.now().toString(),
+         date: new Date().toISOString(),
+         status: 'Pas commencé'
+       };
+       
+       // Save to localStorage
+       const storedOrders = localStorage.getItem('orders');
+       const allOrders: Order[] = storedOrders ? JSON.parse(storedOrders) : [];
+       allOrders.push(newOrder);
+       localStorage.setItem('orders', JSON.stringify(allOrders));
+       
        setOrders(prevOrders => [newOrder, ...prevOrders]);
        return newOrder;
 
@@ -90,24 +97,20 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/${orderId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          // Include authorization header if required
-          // 'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error updating order status: ${response.statusText}`);
-      }
-
-      const updatedOrder = await response.json();
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Update in localStorage
+      const storedOrders = localStorage.getItem('orders');
+      const allOrders: Order[] = storedOrders ? JSON.parse(storedOrders) : [];
+      const updatedOrders = allOrders.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
+      );
+      localStorage.setItem('orders', JSON.stringify(updatedOrders));
+      
       setOrders(prevOrders =>
         prevOrders.map(order =>
-          order.id === updatedOrder.id ? updatedOrder : order
+          order.id === orderId ? { ...order, status: newStatus } : order
         )
       );
     } catch (err: any) {

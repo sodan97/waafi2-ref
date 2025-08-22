@@ -1,6 +1,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { Product, ApiError } from '../types';
+import { PRODUCTS } from '../constants';
 import { useReservation } from './ReservationContext';
 import { useNotification } from './NotificationContext'; // Keep dependency if product stock updates affect notifications
 
@@ -29,22 +30,15 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
   const { getReservationsByProduct, removeReservationsForProduct } = useReservation();
   const { addNotification } = useNotification();
 
-
-
-  // Fetch products from backend
+  // Use local products data instead of backend
   const fetchProducts = useCallback(async () => {
     setIsLoadingProducts(true);
     setProductError(null);
     try {
-      console.log('Fetching products...');
-      const response = await fetch('/api/products'); // Adjust API endpoint as needed
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch products');
-      }
-      const data = await response.json();
-      setProducts(data);
-      console.log('Products fetched successfully:', data);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setProducts(PRODUCTS);
+      console.log('Products loaded from local data:', PRODUCTS);
     } catch (error) {
       console.error('Error fetching products:', error);
       setProductError({ message: error instanceof Error ? error.message : 'An unknown error occurred' });
@@ -76,16 +70,8 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
     setProductError(null);
     const safeNewStock = Math.max(0, newStock);
     try {
-      const response = await fetch(`/api/products/${productId}/stock`, { // Adjust endpoint
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stock: safeNewStock }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update product stock');
-      }
-      const updatedProduct = await response.json(); // Assuming backend returns the updated product
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       setProducts(prevProducts => {
           const oldProduct = prevProducts.find(p => p.id === productId);
@@ -102,7 +88,8 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
                   removeReservationsForProduct(productId);
               }
           }
-          return prevProducts.map(p => (p.id === updatedProduct.id ? updatedProduct : p));
+          return prevProducts.map(p => 
+            p.id === productId ? { ...p, stock: safeNewStock } : p);
       });
 
     } catch (error) {
@@ -117,12 +104,15 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
     setIsLoadingProducts(true);
     setProductError(null);
     try {
-      const response = await fetch('/api/products', { // Adjust endpoint for adding product
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(productData),
-      });
-      const newProduct: Product = await response.json(); // Assuming backend returns the created product
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const newId = Math.max(...products.map(p => p.id)) + 1;
+      const newProduct: Product = {
+        ...productData,
+        id: newId,
+        status: 'active'
+      };
       setProducts(prevProducts => [...prevProducts, newProduct]);
       return newProduct;
     } catch (error) {
@@ -138,13 +128,14 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
     setIsLoadingProducts(true);
     setProductError(null);
     try {
-      const response = await fetch(`/api/products/${productId}`, { // Adjust endpoint for editing product
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(productData),
-      });
-      const updatedProduct = await response.json(); // Assuming backend returns the updated product
-      updateStateAfterOperation(updatedProduct);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      setProducts(prevProducts => 
+        prevProducts.map(p => 
+          p.id === productId ? { ...p, ...productData } : p
+        )
+      );
     } catch (error) {
       console.error('Error editing product:', error);
       setProductError({ message: error instanceof Error ? error.message : 'An unknown error occurred' });
@@ -157,17 +148,14 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
     setIsLoadingProducts(true);
     setProductError(null);
     try {
-      const response = await fetch(`/api/products/${productId}/status`, { // Adjust endpoint
-        method: 'PUT', // Or PATCH
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update product status');
-      }
-      const updatedProduct = await response.json(); // Assuming backend returns the updated product
-      updateStateAfterOperation(updatedProduct);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      setProducts(prevProducts => 
+        prevProducts.map(p => 
+          p.id === productId ? { ...p, status } : p
+        )
+      );
     } catch (error) {
       console.error('Error updating product status:', error);
       setProductError({ message: error instanceof Error ? error.message : 'An unknown error occurred' });
@@ -179,15 +167,14 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
     setIsLoadingProducts(true);
     setProductError(null);
     try {
-      const response = await fetch(`/api/products/${productId}/soft-delete`, { // Adjust endpoint for soft delete
-        method: 'PUT', // Or PATCH depending on your API design
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to soft-delete product');
-      }
-      const updatedProduct = await response.json(); // Assuming backend returns the updated product
-      updateStateAfterOperation(updatedProduct);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      setProducts(prevProducts => 
+        prevProducts.map(p => 
+          p.id === productId ? { ...p, status: 'deleted' } : p
+        )
+      );
     } catch (error) {
       console.error('Error soft-deleting product:', error);
       setProductError({ message: error instanceof Error ? error.message : 'An unknown error occurred' });
@@ -200,15 +187,14 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
     setIsLoadingProducts(true);
     setProductError(null);
     try {
-      const response = await fetch(`/api/products/${productId}/restore`, { // Adjust endpoint for restore
-        method: 'PUT', // Or PATCH
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to restore product');
-      }
-      const restoredProduct = await response.json(); // Assuming backend returns the restored product
-      updateStateAfterOperation(restoredProduct);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      setProducts(prevProducts => 
+        prevProducts.map(p => 
+          p.id === productId ? { ...p, status: 'active' } : p
+        )
+      );
     } catch (error) {
       console.error('Error restoring product:', error);
       setProductError({ message: error instanceof Error ? error.message : 'An unknown error occurred' });
@@ -221,14 +207,9 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
     setIsLoadingProducts(true);
     setProductError(null);
     try {
-      const response = await fetch(`/api/products/${productId}`, { // Adjust endpoint for hard delete
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-         const errorData = await response.json();
-         throw new Error(errorData.message || 'Failed to permanently delete product');
-      }
-      // Assuming backend confirms deletion and returns nothing or success status
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       setProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
       removeReservationsForProduct(productId); // Keep context dependency
     } catch (error) {
