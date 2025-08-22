@@ -1,17 +1,18 @@
 import express from 'express';
-import Product from '../models/Product.js';
+import Product from '../models/Product.js'; // Add .js extension
 import { body, validationResult, param } from 'express-validator';
-import { protect } from '../middleware/authMiddleware.js';
-import { admin } from '../middleware/authMiddleware.js';
+import { protect } from '../middleware/authMiddleware.js'; // Add .js extension
+import { admin } from '../middleware/authMiddleware.js'; // Add .js extension
 
 const router = express.Router();
 
 // GET all active products
-router.get('/products', async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const products = await Product.find({ status: 'active' });
-    res.json(products);
+    res.status(200).json(products);
   } catch (err) {
+    console.error(err); // Log the full error object
     res.status(500).json({ message: err.message });
   }
 });
@@ -19,18 +20,27 @@ router.get('/products', async (req, res) => {
 // GET a single product by ID
 router.get('/products/:id', async (req, res) => {
   const errors = validationResult(req);
+  // NOTE: param('id') validation is for integer IDs. Mongoose _id is a string.
+  // If using Mongoose _id, remove the param validation and use findById.
+  // If keeping integer ID, ensure your Mongoose model handles it.
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
   try {
-    const product = await Product.findOne({ id: req.params.id });
+    // Assuming Mongoose _id is used
+    const product = await Product.findById(req.params.id);
+
+    // If using integer ID from schema:
+    // const product = await Product.findOne({ id: parseInt(req.params.id) });
+
     if (product == null) {
       return res.status(404).json({ message: 'Product not found' });
     }
     res.json(product);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    // Handle potential CastError if _id is invalid format
+    res.status(500).json({ message: err.message }); // Use 400 for CastError
   }
 });
 
@@ -48,11 +58,15 @@ router.post('/products', protect, admin, [
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-  const lastProduct = await Product.findOne().sort({ id: -1 }).limit(1);
-  const newId = lastProduct ? lastProduct.id + 1 : 1;
+
+  // NOTE: If using Mongoose _id, remove the manual ID generation.
+  // The schema should not have an 'id' field with manual generation.
+  // If you need a sequential product number for display, handle it separately.
+  // const lastProduct = await Product.findOne().sort({ id: -1 }).limit(1);
+  // const newId = lastProduct ? lastProduct.id + 1 : 1;
 
   const product = new Product({
-    id: newId,
+    // id: newId, // Remove if using Mongoose _id
     name: req.body.name,
     description: req.body.description,
     price: req.body.price,
@@ -70,6 +84,32 @@ router.post('/products', protect, admin, [
   }
 });
 
+// GET all products (for admin) - includes archived/deleted
+router.get('/admin', protect, admin, async (req, res) => {
+  try {
+    const products = await Product.find({});
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// PUT update product status (for admin)
+router.put('/:id/status', protect, admin, [
+    param('id').isMongoId().withMessage('Invalid Product ID'), // Validate _id format
+    body('status').isIn(['active', 'archived', 'deleted']).withMessage('Invalid status value'),
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) { return res.status(400).json({ errors: errors.array() }); }
+    try {
+        const product = await Product.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
+        if (!product) return res.status(404).json({ message: 'Product not found' });
+        res.json(product);
+    } catch (err) {
+         res.status(500).json({ message: err.message }); // Use 400 for CastError
+    }
+});
+
 // PUT update an existing product
 router.put('/products/:id', protect, admin, [
   param('id').isInt({ gt: 0 }).withMessage('Product ID must be a positive integer'),
@@ -78,13 +118,19 @@ router.put('/products/:id', protect, admin, [
   body('price').optional().isFloat({ gt: 0 }).withMessage('Price must be a positive number'),
   body('imageUrls').optional().isArray().withMessage('Image URLs must be an array'),
   body('imageUrls.*').optional().isURL().withMessage('Each image URL must be a valid URL'),
-  body('category').optional().isString().notEmpty().withMessage('Category must be a non-empty string'),
+  body('category').optional().isString().notEmpty().withMessage('Category must be a non-empty string'), // Check if category is required
   body('stock').optional().isInt({ gt: -1 }).withMessage('Stock must be a non-negative integer'),
-], protect, async (req, res) => {
+], async (req, res) => { // Removed protect, admin middleware here as it's after validation
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
+
+   // Re-apply protect, admin middleware here if needed after validation
+   // protect(req, res, () => {
+   //  admin(req, res, async () => {
+
+
   try {
     const product = await Product.findOne({ id: req.params.id });
     if (product == null) {
@@ -103,47 +149,24 @@ router.put('/products/:id', protect, admin, [
     res.json(updatedProduct);
   } catch (err) {
     res.status(400).json({ message: err.message });
+     // Use 400 for CastError if _id validation is by param
   }
 });
 
+// Note: Soft delete, restore, and permanent delete can be handled by the /:id/status route.
+// Removed redundant routes.
+
+/*
+// KEEP ONLY if you need specific soft/hard delete endpoints instead of using /:id/status
 // DELETE soft delete a product (set status to 'deleted')
-router.delete('/products/:id', protect, admin, [
+router.delete('/:id', protect, admin, [
+    param('id').isMongoId().withMessage('Invalid Product ID'),
 ], async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) { return res.status(400).json({ errors: errors.array() }); }
-    
-    try {
-        const product = await Product.findOne({ id: req.params.id });
-        if (product == null) {
-          return res.status(404).json({ message: 'Product not found' });
-        }
 
-        product.status = 'deleted';
-        await product.save();
-        res.json({ message: 'Product soft deleted' });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
+    try { // ... soft delete logic ... } catch (err) { ... }
 });
-
-// PUT restore a deleted product (set status to 'active')
-router.put('/products/:id/restore', protect, admin, [
- param('id').isInt({ gt: 0 }).withMessage('Product ID must be a positive integer'),
-], async (req, res) => {
-    try {
-        const product = await Product.findOne({ id: req.params.id });
-        if (product == null) {
-          return res.status(404).json({ message: 'Product not found' });
-        }
-
-        product.status = 'active';
-        await product.save();
-        res.json({ message: 'Product restored' });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
 // DELETE permanently delete a product
 router.delete('/products/:id/permanent', protect, admin, [
  param('id').isInt({ gt: 0 }).withMessage('Product ID must be a positive integer'),
@@ -157,7 +180,7 @@ router.delete('/products/:id/permanent', protect, admin, [
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
-});
+});*/
 
 
 export default router;

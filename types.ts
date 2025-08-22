@@ -33,12 +33,14 @@ export interface Order {
   };
   items: CartItem[];
   total: number;
-  userId: number | null;
+  userId: string | null;
+  status: string;
   date: string;
 }
 
 export interface LoginResponse {
   token: string;
+  user: User;
 }
 
 export interface Reservation {
@@ -54,4 +56,9 @@ export interface Notification {
   read: boolean;
   date: string;
   productId: number;
+}
+
+export interface ApiError {
+  message: string;
+  status?: number;
 }

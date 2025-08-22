@@ -1,140 +1,258 @@
 
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { Product } from '../types';
-import { PRODUCTS as initialProducts } from '../constants';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
+import { Product, ApiError } from '../types';
 import { useReservation } from './ReservationContext';
-import { useNotification } from './NotificationContext';
+import { useNotification } from './NotificationContext'; // Keep dependency if product stock updates affect notifications
 
 interface ProductContextType {
   products: Product[];
   activeProducts: Product[];
-  updateProductStock: (productId: number, newStock: number) => void;
-  addProduct: (productData: Omit<Product, 'id' | 'status'>) => void;
-  updateProductStatus: (productId: number, status: 'active' | 'archived') => void;
-  editProduct: (productId: number, productData: Omit<Product, 'id' | 'status'>) => void;
-  deleteProduct: (productId: number) => void; // Soft delete
-  restoreProduct: (productId: number) => void;
-  permanentlyDeleteProduct: (productId: number) => void; // Hard delete
+  isLoadingProducts: boolean;
+  productError: ApiError | null;
+  fetchProducts: () => Promise<void>;
+  updateProductStock: (productId: number, newStock: number) => Promise<void>;
+  addProduct: (productData: Omit<Product, 'id' | 'status'>) => Promise<Product | null>;
+  updateProductStatus: (productId: number, status: 'active' | 'archived') => Promise<void>;
+  editProduct: (productId: number, productData: Omit<Product, 'id' | 'status'>) => Promise<void>;
+  deleteProduct: (productId: number) => Promise<void>; // Soft delete
+  restoreProduct: (productId: number) => Promise<void>;
+  permanentlyDeleteProduct: (productId: number) => Promise<void>; // Hard delete
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
-const PRODUCTS_KEY = 'belleza-products';
-
 export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [products, setProducts] = useState<Product[]>(() => {
-    try {
-      const storedProducts = localStorage.getItem(PRODUCTS_KEY);
-      if (storedProducts) {
-        const parsed = JSON.parse(storedProducts);
-        if (Array.isArray(parsed) && parsed.every(p => 'status' in p)) {
-            return parsed;
-        }
-      }
-      return initialProducts.map(p => ({ ...p, status: p.status || 'active' }));
-    } catch (error) {
-      console.error("Failed to load products from local storage, using initial data.", error);
-      return initialProducts.map(p => ({ ...p, status: p.status || 'active' }));
-    }
-  });
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
+  const [productError, setProductError] = useState<ApiError | null>(null);
 
   const { getReservationsByProduct, removeReservationsForProduct } = useReservation();
   const { addNotification } = useNotification();
 
-  useEffect(() => {
+
+
+  // Fetch products from backend
+  const fetchProducts = useCallback(async () => {
+    setIsLoadingProducts(true);
+    setProductError(null);
     try {
-      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
+      console.log('Fetching products...');
+      const response = await fetch('/api/products'); // Adjust API endpoint as needed
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch products');
+      }
+      const data = await response.json();
+      setProducts(data);
+      console.log('Products fetched successfully:', data);
     } catch (error) {
-      console.error("Failed to save products to local storage", error);
+      console.error('Error fetching products:', error);
+      setProductError({ message: error instanceof Error ? error.message : 'An unknown error occurred' });
+      console.error('Error details:', error);
+    } finally {
+      setIsLoadingProducts(false);
     }
-  }, [products]);
+  }, []);
+
+  useEffect(() => {
+    console.log('useEffect in ProductContext is running');
+    fetchProducts();
+  }, [fetchProducts]);
 
   const activeProducts = products.filter(p => p.status === 'active');
+  const updateStateAfterOperation = useCallback((updatedProduct?: Product | null) => {
+ if (updatedProduct) {
+ setProducts(prevProducts =>
+ prevProducts.map(p => (p.id === updatedProduct.id ? updatedProduct : p))
+ );
+ } else {
+ // Option 1: Refetch all products (simpler, but less efficient for single updates)
+ fetchProducts();
+ // Option 2: Manually update state based on operation type (more complex)
+ // This would require passing more context about the operation (e.g., 'added', 'updated', 'deleted')
+ }
+  }, [fetchProducts]);
 
-  const updateProductStock = (productId: number, newStock: number) => {
+  const updateProductStock = useCallback(async (productId: number, newStock: number) => {
+    setIsLoadingProducts(true);
+    setProductError(null);
     const safeNewStock = Math.max(0, newStock);
+    try {
+      const response = await fetch(`/api/products/${productId}/stock`, { // Adjust endpoint
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stock: safeNewStock }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update product stock');
+      }
+      const updatedProduct = await response.json(); // Assuming backend returns the updated product
 
-    setProducts(prevProducts => {
-        const oldProduct = prevProducts.find(p => p.id === productId);
-        const newProducts = prevProducts.map(p =>
-            p.id === productId ? { ...p, stock: safeNewStock } : p
-        );
+      setProducts(prevProducts => {
+          const oldProduct = prevProducts.find(p => p.id === productId);
+          if (oldProduct && oldProduct.stock <= 0 && safeNewStock > 0) {
+              const reservations = getReservationsByProduct(productId);
+              if (reservations.length > 0) {
+                  reservations.forEach(reservation => {
+                      addNotification({
+                          userId: reservation.userId,
+                          message: `Bonne nouvelle ! Le produit "${oldProduct.name}" que vous attendiez est de nouveau en stock.`,
+                          productId: oldProduct.id,
+                      });
+                  });
+                  removeReservationsForProduct(productId);
+              }
+          }
+          return prevProducts.map(p => (p.id === updatedProduct.id ? updatedProduct : p));
+      });
 
-        if (oldProduct && oldProduct.stock <= 0 && safeNewStock > 0) {
-            const reservations = getReservationsByProduct(productId);
-            if (reservations.length > 0) {
-                reservations.forEach(reservation => {
-                    addNotification({
-                        userId: reservation.userId,
-                        message: `Bonne nouvelle ! Le produit "${oldProduct.name}" que vous attendiez est de nouveau en stock.`,
-                        productId: oldProduct.id,
-                    });
-                });
-                removeReservationsForProduct(productId);
-            }
-        }
-        return newProducts;
-    });
-  };
-  
-  const addProduct = (productData: Omit<Product, 'id' | 'status'>) => {
-    setProducts(prevProducts => {
-        const newId = prevProducts.length > 0 ? Math.max(...prevProducts.map(p => p.id)) + 1 : 1;
-        const newProduct: Product = {
-            id: newId,
-            ...productData,
-            status: 'active',
-        };
-        return [...prevProducts, newProduct];
-    });
-  };
-  
-  const updateProductStatus = (productId: number, status: 'active' | 'archived') => {
-    setProducts(prevProducts =>
-      prevProducts.map(p =>
-        p.id === productId ? { ...p, status } : p
-      )
-    );
-  };
+    } catch (error) {
+      console.error('Error updating product stock:', error);
+      setProductError({ message: error instanceof Error ? error.message : 'An unknown error occurred' });
+    } finally {
+      setIsLoadingProducts(false);
+ }
+  }, [getReservationsByProduct, addNotification, removeReservationsForProduct, fetchProducts]);
 
-  const editProduct = (productId: number, productData: Omit<Product, 'id' | 'status'>) => {
-    setProducts(prevProducts =>
-      prevProducts.map(p =>
-        p.id === productId ? { ...p, ...productData, id: productId } : p
-      )
-    );
-  };
+  const addProduct = useCallback(async (productData: Omit<Product, 'id' | 'status'>) => {
+    setIsLoadingProducts(true);
+    setProductError(null);
+    try {
+      const response = await fetch('/api/products', { // Adjust endpoint for adding product
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData),
+      });
+      const newProduct: Product = await response.json(); // Assuming backend returns the created product
+      setProducts(prevProducts => [...prevProducts, newProduct]);
+      return newProduct;
+    } catch (error) {
+      console.error('Error adding product:', error);
+      setProductError({ message: error instanceof Error ? error.message : 'An unknown error occurred' });
+      return null;
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  }, []);
 
-  const deleteProduct = (productId: number) => { // Soft delete
-    setProducts(prevProducts =>
-      prevProducts.map(p =>
-        p.id === productId ? { ...p, status: 'deleted' } : p
-      )
-    );
-  };
+  const editProduct = useCallback(async (productId: number, productData: Omit<Product, 'id' | 'status'>) => {
+    setIsLoadingProducts(true);
+    setProductError(null);
+    try {
+      const response = await fetch(`/api/products/${productId}`, { // Adjust endpoint for editing product
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData),
+      });
+      const updatedProduct = await response.json(); // Assuming backend returns the updated product
+      updateStateAfterOperation(updatedProduct);
+    } catch (error) {
+      console.error('Error editing product:', error);
+      setProductError({ message: error instanceof Error ? error.message : 'An unknown error occurred' });
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  }, [updateStateAfterOperation]);
 
-  const restoreProduct = (productId: number) => {
-    setProducts(prevProducts =>
-        prevProducts.map(p =>
-            p.id === productId ? { ...p, status: 'active' } : p
-        )
-    );
-  };
+ const updateProductStatus = useCallback(async (productId: number, status: 'active' | 'archived') => {
+    setIsLoadingProducts(true);
+    setProductError(null);
+    try {
+      const response = await fetch(`/api/products/${productId}/status`, { // Adjust endpoint
+        method: 'PUT', // Or PATCH
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update product status');
+      }
+      const updatedProduct = await response.json(); // Assuming backend returns the updated product
+      updateStateAfterOperation(updatedProduct);
+    } catch (error) {
+      console.error('Error updating product status:', error);
+      setProductError({ message: error instanceof Error ? error.message : 'An unknown error occurred' });
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  }, [updateStateAfterOperation]);
+  const deleteProduct = useCallback(async (productId: number) => { // Soft delete
+    setIsLoadingProducts(true);
+    setProductError(null);
+    try {
+      const response = await fetch(`/api/products/${productId}/soft-delete`, { // Adjust endpoint for soft delete
+        method: 'PUT', // Or PATCH depending on your API design
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to soft-delete product');
+      }
+      const updatedProduct = await response.json(); // Assuming backend returns the updated product
+      updateStateAfterOperation(updatedProduct);
+    } catch (error) {
+      console.error('Error soft-deleting product:', error);
+      setProductError({ message: error instanceof Error ? error.message : 'An unknown error occurred' });
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  }, [updateStateAfterOperation]);
 
-  const permanentlyDeleteProduct = (productId: number) => { // Hard delete
-    removeReservationsForProduct(productId);
-    setProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
-  };
+  const restoreProduct = useCallback(async (productId: number) => {
+    setIsLoadingProducts(true);
+    setProductError(null);
+    try {
+      const response = await fetch(`/api/products/${productId}/restore`, { // Adjust endpoint for restore
+        method: 'PUT', // Or PATCH
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to restore product');
+      }
+      const restoredProduct = await response.json(); // Assuming backend returns the restored product
+      updateStateAfterOperation(restoredProduct);
+    } catch (error) {
+      console.error('Error restoring product:', error);
+      setProductError({ message: error instanceof Error ? error.message : 'An unknown error occurred' });
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  }, [updateStateAfterOperation]);
+
+  const permanentlyDeleteProduct = useCallback(async (productId: number) => { // Hard delete
+    setIsLoadingProducts(true);
+    setProductError(null);
+    try {
+      const response = await fetch(`/api/products/${productId}`, { // Adjust endpoint for hard delete
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+         const errorData = await response.json();
+         throw new Error(errorData.message || 'Failed to permanently delete product');
+      }
+      // Assuming backend confirms deletion and returns nothing or success status
+      setProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
+      removeReservationsForProduct(productId); // Keep context dependency
+    } catch (error) {
+      console.error('Error permanently deleting product:', error);
+      setProductError({ message: error instanceof Error ? error.message : 'An unknown error occurred' });
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  }, [removeReservationsForProduct]); // Add dependency
 
   const value = {
-    products, 
-    activeProducts, 
-    updateProductStock, 
-    addProduct, 
-    updateProductStatus, 
-    editProduct, 
-    deleteProduct, 
-    restoreProduct, 
+    products,
+    activeProducts,
+    isLoadingProducts,
+    productError,
+    fetchProducts,
+    updateProductStock,
+    addProduct,
+    updateProductStatus,
+    editProduct,
+    deleteProduct,
+    restoreProduct,
     permanentlyDeleteProduct
   };
 

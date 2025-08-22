@@ -1,88 +1,143 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { User, LoginResponse } from '../types'; // Assuming LoginResponse includes token and user info
+import { User, LoginResponse } from '../types';
 import {jwtDecode} from 'jwt-decode'; // Assuming jwt-decode is installed for decoding tokens
 
 interface AuthContextType {
   currentUser: User | null;
-  login: (email: string, password: string) => Promise<User>; // login is now async and returns a User
-  logout: () => void;
-  register: (userData: Omit<User, 'id' | 'role'>) => Promise<boolean>; // register is now async and returns a boolean
+  login: (email: string, password: string) => Promise<User | null>;
+  logout: () => Promise<void>;
+  register: (userData: Omit<User, 'id' | 'role'>) => Promise<User | null>;
+  isLoadingAuth: boolean;
+  authError: Error | string | null;
 }
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const USERS_KEY = 'belleza-users';
-const CURRENT_USER_KEY = 'belleza-currentUser';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true);
+  const [authError, setAuthError] = useState<Error | string | null>(null);
 
   useEffect(() => {
-    try {
-      const storedUsers = localStorage.getItem(USERS_KEY);
-      let loadedUsers: User[] = storedUsers ? JSON.parse(storedUsers) : [];
+    const checkAuthStatus = async () => {
+      setIsLoadingAuth(true);
+      setAuthError(null);
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setCurrentUser(null);
+          return;
+        }
+        // Optionally verify token with backend
+        const response = await fetch('/api/users/status', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
 
-      // Ensure admin user exists
-      const adminExists = loadedUsers.some(u => u.role === 'admin');
-      if (!adminExists) {
-        const adminUser: User = {
-          id: Date.now(),
-          email: 'admin@wafi.com',
-          password: 'admin', // In a real app, use a hashed password
-          firstName: 'Admin',
-          lastName: 'WAFI',
-          role: 'admin',
-        };
-        loadedUsers.push(adminUser);
-        localStorage.setItem(USERS_KEY, JSON.stringify(loadedUsers));
+        if (!response.ok) {
+          localStorage.removeItem('token');
+          setCurrentUser(null);
+          throw new Error('Authentication check failed');
+        }
+        const userData: User = await response.json();
+        setCurrentUser(userData);
+      } catch (error) {
+        console.error("Authentication check error:", error);
+        setAuthError(error instanceof Error ? error : new Error(String(error)));
+        setCurrentUser(null);
+      } finally {
+        setIsLoadingAuth(false);
       }
-      setUsers(loadedUsers);
-
-      const storedCurrentUser = localStorage.getItem(CURRENT_USER_KEY);
-      if (storedCurrentUser) {
-        setCurrentUser(JSON.parse(storedCurrentUser));
-      }
-    } catch (error) {
-      console.error("Failed to load user data from local storage", error);
-    }
-  }, []);
-  
-  const login = (email: string, password: string): User | null => {
-    const user = users.find(u => u.email === email && u.password === password);
-    if (user) {
-      setCurrentUser(user);
-      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-      return user;
-    }
-    return null;
-  };
-
-  const logout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem(CURRENT_USER_KEY);
-  };
-
-  const register = (userData: Omit<User, 'id' | 'role'>): boolean => {
-    const userExists = users.some(u => u.email === userData.email);
-    if (userExists) {
-      return false; // User already exists
-    }
-    const newUser: User = {
-      ...userData,
-      id: Date.now(),
-      role: 'customer',
     };
-    const updatedUsers = [...users, newUser];
-    setUsers(updatedUsers);
-    localStorage.setItem(USERS_KEY, JSON.stringify(updatedUsers));
-    // Automatically log in the new user
-    setCurrentUser(newUser);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
-    return true;
+    checkAuthStatus();
+  }, []);
+
+  const login = async (email: string, password: string): Promise<User | null> => {
+    setIsLoadingAuth(true);
+    setAuthError(null);
+    try {
+      const response = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Login failed');
+      }
+
+      const data: LoginResponse = await response.json();
+      localStorage.setItem('token', data.token);
+      setCurrentUser(data.user);
+      setIsLoadingAuth(false);
+      return data.user;
+
+    } catch (error) {
+      console.error("Login error:", error);
+      setAuthError(error instanceof Error ? error : new Error(String(error)));
+      setIsLoadingAuth(false);
+      return null;
+    }
   };
+
+  const logout = async (): Promise<void> => {
+    setIsLoadingAuth(true);
+    setAuthError(null);
+    try {
+      // Ideally, you would call a backend API here to invalidate the token
+      // const response = await fetch('/api/users/logout', { method: 'POST', ... });
+      // if (!response.ok) {
+      //    console.error('Backend logout failed');
+      // }
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if backend logout fails, clear client state
+      setAuthError(error instanceof Error ? error : new Error(String(error)));
+    } finally {
+      localStorage.removeItem('token');
+      setCurrentUser(null);
+      setIsLoadingAuth(false);
+    }
+  };
+
+  const register = async (userData: Omit<User, 'id' | 'role'>): Promise<User | null> => {
+    setIsLoadingAuth(true);
+    setAuthError(null);
+    try {
+      const response = await fetch('/api/users/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Registration failed');
+      }
+
+      const newUser: User = await response.json(); // Assuming backend returns the new user object
+      // Optionally log in the new user automatically
+      // localStorage.setItem('token', newToken); // if backend returns a token
+      setCurrentUser(newUser);
+      setIsLoadingAuth(false);
+      return newUser;
+    } catch (error) {
+      console.error("Registration error:", error);
+      setAuthError(error instanceof Error ? error : new Error(String(error)));
+      setIsLoadingAuth(false);
+      return null;
+    }
+  };
+
 
   return (
-    <AuthContext.Provider value={{ currentUser, users, login, logout, register }}>
+    <AuthContext.Provider value={{ currentUser, login, logout, register, isLoadingAuth, authError }}>
       {children}
     </AuthContext.Provider>
   );

@@ -28,70 +28,6 @@ export const HERO_SLIDES = [
 
 export const PRODUCTS: Product[] = [
   {
-    id: 1,
-    name: "Parfum 'Fleur de Nuit'",
-    price: 35000,
-    imageUrls: [
-        "https://images.unsplash.com/photo-1585398918583-1b95b8b0a93c?q=80&w=1887&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1541643600914-78b084683602?q=80&w=1887&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=1887&auto=format&fit=crop",
-    ],
-    description: "Une fragrance envoûtante et mystérieuse, mêlant jasmin, ambre et notes boisées. Parfait pour les soirées où vous voulez laisser une impression mémorable.",
-    category: "Produits Cosmétiques & Accessoires",
-    stock: 15,
-    status: 'active'
-  },
-  {
-    id: 2,
-    name: "Sérum Éclat 'Or Liquide'",
-    price: 22000,
-    imageUrls: ["https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=1887&auto=format&fit=crop"],
-    description: "Un sérum visage revitalisant enrichi en vitamines pour une peau lumineuse.",
-    category: "Produits Cosmétiques & Accessoires",
-    stock: 25,
-    status: 'active'
-  },
-  {
-    id: 4,
-    name: "Rouge à Lèvres 'Rouge Passion'",
-    price: 12500,
-    imageUrls: ["https://images.unsplash.com/photo-1586495777744-4413f21062fa?q=80&w=1887&auto=format&fit=crop"],
-    description: "Un rouge à lèvres mat longue tenue, à la couleur intense et veloutée.",
-    category: "Produits Cosmétiques & Accessoires",
-    stock: 30,
-    status: 'active'
-  },
-  {
-    id: 6,
-    name: "Mascara Volume 'Regard Intense'",
-    price: 11000,
-    imageUrls: ["https://images.unsplash.com/photo-1560790671-b765b533af5c?q=80&w=1890&auto=format&fit=crop"],
-    description: "Donnez à vos cils un volume spectaculaire et une longueur infinie.",
-    category: "Produits Cosmétiques & Accessoires",
-    stock: 40,
-    status: 'active'
-  },
-  {
-    id: 3,
-    name: "Crème Mains 'Douceur de Karité'",
-    price: 8500,
-    imageUrls: ["https://images.unsplash.com/photo-1629198725902-ad28635fedeb?q=80&w=1887&auto=format&fit=crop"],
-    description: "Crème nourrissante au beurre de karité pur pour des mains douces et protégées.",
-    category: "Produits Cosmétiques & Accessoires",
-    stock: 50,
-    status: 'active'
-  },
-  {
-    id: 5,
-    name: "Huile Corporelle 'Soleil Scintillant'",
-    price: 19000,
-    imageUrls: ["https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=1887&auto=format&fit=crop"],
-    description: "Huile sèche qui nourrit la peau et laisse un voile doré, délicatement parfumé.",
-    category: "Produits Cosmétiques & Accessoires",
-    stock: 20,
-    status: 'active'
-  },
-  {
     id: 7,
     name: "Écharpe en Soie 'Jardin d'Hiver'",
     price: 28000,
@@ -144,6 +80,70 @@ export const PRODUCTS: Product[] = [
     category: "Électronique",
     stock: 18,
     status: 'active'
+  },
+    {
+      id: 1,
+      name: "Parfum 'Fleur de Nuit'",
+      price: 35000,
+      imageUrls: [
+          "https://images.unsplash.com/photo-1585398918583-1b95b8b0a93c?q=80&w=1887&auto=format&fit=crop",
+          "https://images.unsplash.com/photo-1541643600914-78b084683602?q=80&w=1887&auto=format&fit=crop",
+          "https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=1887&auto=format&fit=crop",
+      ],
+      description: "Une fragrance envoûtante et mystérieuse, mêlant jasmin, ambre et notes boisées. Parfait pour les soirées où vous voulez laisser une impression mémorable.",
+      category: "Produits Cosmétiques & Accessoires",
+      stock: 15,
+      status: 'active'
+    },
+    {
+      id: 2,
+      name: "Sérum Éclat 'Or Liquide'",
+      price: 22000,
+      imageUrls: ["https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=1887&auto=format&fit=crop"],
+      description: "Un sérum visage revitalisant enrichi en vitamines pour une peau lumineuse.",
+      category: "Produits Cosmétiques & Accessoires",
+      stock: 25,
+      status: 'active'
+    },
+    {
+      id: 4,
+      name: "Rouge à Lèvres 'Rouge Passion'",
+      price: 12500,
+      imageUrls: ["https://images.unsplash.com/photo-1586495777744-4413f21062fa?q=80&w=1887&auto=format&fit=crop"],
+      description: "Un rouge à lèvres mat longue tenue, à la couleur intense et veloutée.",
+      category: "Produits Cosmétiques & Accessoires",
+      stock: 30,
+      status: 'active'
+    },
+    {
+      id: 6,
+      name: "Mascara Volume 'Regard Intense'",
+      price: 11000,
+      imageUrls: ["https://images.unsplash.com/photo-1560790671-b765b533af5c?q=80&w=1890&auto=format&fit=crop"],
+      description: "Donnez à vos cils un volume spectaculaire et une longueur infinie.",
+      category: "Produits Cosmétiques & Accessoires",
+      stock: 40,
+      status: 'active'
+    },
+    {
+      id: 3,
+      name: "Crème Mains 'Douceur de Karité'",
+      price: 8500,
+      imageUrls: ["https://images.unsplash.com/photo-1629198725902-ad28635fedeb?q=80&w=1887&auto=format&fit=crop"],
+      description: "Crème nourrissante au beurre de karité pur pour des mains douces et protégées.",
+      category: "Produits Cosmétiques & Accessoires",
+      stock: 50,
+      status: 'active'
+    },
+    {
+      id: 5,
+      name: "Huile Corporelle 'Soleil Scintillant'",
+      price: 19000,
+      imageUrls: ["https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=1887&auto=format&fit=crop"],
+      description: "Huile sèche qui nourrit la peau et laisse un voile doré, délicatement parfumé.",
+      category: "Produits Cosmétiques & Accessoires",
+      stock: 20,
+      status: 'active'
   }
 ];
 

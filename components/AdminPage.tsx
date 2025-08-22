@@ -245,7 +245,7 @@ const ProductManager: React.FC = () => {
 }
 
 const OrderManager: React.FC = () => {
-    const { orders } = useOrder();
+    const { orders, updateOrderStatus, isLoading, error } = useOrder();
     const { users } = useAuth();
 
     const columns = useMemo(() => [
@@ -258,6 +258,26 @@ const OrderManager: React.FC = () => {
         { Header: 'Heure', accessor: 'time' as const },
         { Header: 'Total (FCFA)', accessor: 'total' as const },
         { Header: 'Articles', accessor: 'items' as const },
+        {
+            Header: 'Statut',
+            accessor: 'status' as const,
+            Cell: ({ value, row }) => { // 'value' est la valeur actuelle du statut, 'row' est l'objet commande
+                return (
+                    <select
+                        value={value || 'Pas commencé'} // Utilisez la valeur actuelle ou 'Pas commencé' par défaut
+                        onChange={(e) => {
+                            updateOrderStatus(row.original.id, e.target.value);
+                            // Example if you had an update function in useOrder context:
+                            // updateOrderStatus(row.original.id, e.target.value);
+                        }}
+                    >
+                        <option value="Pas commencé">Pas commencé</option>
+                        <option value="En traitement">En traitement</option>
+                        <option value="Terminée">Terminée</option>
+                    </select>
+                );
+            }
+        },
     ], []);
 
     const data = useMemo(() => orders.map(order => {
@@ -272,13 +292,34 @@ const OrderManager: React.FC = () => {
             time: new Date(order.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
             total: order.total.toLocaleString('fr-FR'),
             items: order.items.map(item => `${item.name} (x${item.quantity})`).join(', '),
+            status: order.status || 'Pas commencé', // Ensure status is included, default if missing
         };
     }), [orders, users]);
 
     return (
         <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
             <h3 className="text-2xl font-bold mb-4">Historique des Commandes</h3>
-            <DataTable columns={columns} data={data} exportFilename="commandes_belleza" />
+            {isLoading ? (
+                <p className="text-center text-gray-500 py-12">Chargement des commandes...</p>
+            ) : error ? (
+                <p className="text-center text-red-600 py-12">Erreur lors du chargement des commandes : {error}</p>
+            ) : (
+                <DataTable columns={columns} data={data} exportFilename="commandes_belleza" />
+            )}
+        </div>
+    );
+}
+
+// Assuming you might have a separate component for Order History if needed elsewhere
+// For now, the OrderManager component serves this purpose within AdminPage.
+// If you had a separate OrderHistoryPage component, you would apply similar logic there.
+const OrderHistoryPage: React.FC = () => {
+     // If this were a separate component, you'd fetch and display orders here.
+     // Since OrderManager is used within AdminPage, this component is not directly used.
+     return (
+         <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
+             <h3 className="text-2xl font-bold mb-4">Order History Page Placeholder</h3>
+             {/* Content would go here */}
         </div>
     );
 }

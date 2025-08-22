@@ -5,7 +5,7 @@ import { useOrder } from '../context/OrderContext';
 import { MERCHANT_WHATSAPP_NUMBER } from '../constants';
 
 interface CheckoutFormProps {
-  onOrderSuccess: (whatsappUrl: string) => void;
+  onOrderSuccess: (whatsappUrl: string, orderId: string) => void;
 }
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderSuccess }) => {
@@ -91,14 +91,19 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderSuccess }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid) return;
+ if (!isFormValid || cartItems.length === 0) return;
 
-    addOrder({
-      customer: formData,
-      items: cartItems,
-      total: cartItems.reduce((total, item) => total + item.price * item.quantity, 0),
-      userId: currentUser ? currentUser.id : null,
-    });
+    // Make handleSubmit async
+    const submitOrder = async () => {
+      const orderData = {
+        customer: formData,
+        items: cartItems,
+        total: cartItems.reduce((total, item) => total + item.price * item.quantity, 0),
+        userId: currentUser ? currentUser.id : null,
+      };
+
+      // Await the addOrder function
+      const newOrder = await addOrder(orderData);
 
     const customerInfoParts = [
       '*Nouvelle Commande de Belleza*',
@@ -129,7 +134,16 @@ Merci de confirmer la commande et de me communiquer les modalités de paiement e
     const fullMessage = `${customerInfo}\n\n*Détails de la commande:*\n\n${orderItems}\n\n-----------------------------\n${totalLine}\n${closingMessage}`;
     const whatsappUrl = `https://wa.me/${MERCHANT_WHATSAPP_NUMBER}?text=${encodeURIComponent(fullMessage)}`;
     
-    onOrderSuccess(whatsappUrl);
+      // Handle the potential undefined return value (failure)
+      if (newOrder) {
+        // If order succeeded, call onOrderSuccess with the new order ID
+        onOrderSuccess(whatsappUrl, newOrder.id);
+      } else {
+        // Handle failure (e.g., show an error message to the user)
+        console.error('Failed to create order via API');
+      }
+    };
+    submitOrder(); // Call the async function
   };
   
   return (
